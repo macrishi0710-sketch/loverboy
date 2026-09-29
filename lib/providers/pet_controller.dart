@@ -13,7 +13,7 @@ class PetController extends ChangeNotifier {
   PetController({required this.sound, required this.lines});
 
   final SoundService sound;
-  final SpeechLines lines;
+  SpeechLines lines; // swapped in once the JSON asset loads
 
   // ---------- persisted keys ----------
   static const _kHits = 'hit_count';
@@ -43,6 +43,14 @@ class PetController extends ChangeNotifier {
   int petTick = 0;
   /// Incremented on long-press - triggers full laugh.
   int laughTick = 0;
+  /// Incremented when the mic permission is denied - the screen shows a hint.
+  int permissionDeniedTick = 0;
+
+  void notifyMicDenied() {
+    permissionDeniedTick++;
+    showBubble('Mic ki permission chahiye 🎤 Settings mein jaakar de do');
+    notifyListeners();
+  }
 
   Timer? _bubbleTimer;
   Timer? _faceTimer;
@@ -53,6 +61,12 @@ class PetController extends ChangeNotifier {
   bool get vibrationOn => sound.vibrationEnabled;
 
   int _lastRandomIndex = -1; // prevents the same random line twice in a row
+
+  /// Replace the placeholder lines with the parsed JSON asset (called from main).
+  void setLines(SpeechLines l) {
+    lines = l;
+    notifyListeners();
+  }
 
   // ---------- boot ----------
   Future<void> init() async {
@@ -108,7 +122,14 @@ class PetController extends ChangeNotifier {
     notifyListeners();
   }
 
+  DateTime? _lastPetAt;
   void petHead() {
+    // Throttle: a fast drag fires many pan updates - only react every 700 ms.
+    final now = DateTime.now();
+    if (_lastPetAt != null && now.difference(_lastPetAt!) < const Duration(milliseconds: 700)) {
+      return;
+    }
+    _lastPetAt = now;
     petTick++;
     sound.playHappy();
     _setFace(MonkeyFace.loved, hold: const Duration(milliseconds: 1200));
@@ -188,6 +209,9 @@ class PetController extends ChangeNotifier {
     (await SharedPreferences.getInstance()).setString(_kFooter, footerText);
     notifyListeners();
   }
+
+  /// Called by the UI when the OS denied microphone access.
+  void reportMicDenied() => notifyMicDenied();
 
   Future<void> resetCounter() async {
     _hits = 0;

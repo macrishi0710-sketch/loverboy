@@ -48,6 +48,12 @@ class SpeechLines {
     50: "Ab to I love you bol do na 😭💗",
   };
 
+
+  /// Placeholder instance used before the JSON asset finishes loading.
+  /// Uses the built-in fallback lines so the app is never silent.
+  static SpeechLines empty() =>
+      SpeechLines._(_fallbackLines, _fallbackIdle, _fallbackMilestones);
+
   /// Read + parse the JSON asset once at startup.
   static Future<SpeechLines> load() async {
     try {

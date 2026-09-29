@@ -1,47 +1,47 @@
 import 'dart:async';
-import 'dart:io';
-import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:record/record.dart';
 
+import 'recorder_service.dart';
 import 'wav_processor.dart';
 
 /// Talking-mode state machine: idle -> listening -> processing -> speaking.
 enum TalkState { idle, requestingMic, listening, processing, speaking }
 
-/// Owns the microphone recorder + pitch-shift pipeline for talking mode.
+/// Drives the "repeat what the user says in a funny high-pitched voice" loop:
 ///
-/// Flow (like the classic pet apps): hold/tap the mic button -> record ->
-/// stop -> pitch up on-device -> play through SoundService while the UI
-/// drives a mouth-sync animation from [amplitude]/[speakingLevel].
+///   record (on-device PCM wav)  ->  pitch-shift up (granular WSOLA)  ->  play
+///
+/// Everything happens locally; audio never leaves the phone. The controller
+/// also exposes [amplitude] so the UI can show a live mic meter and drive the
+/// monkey's mouth-sync animation while the shifted clip plays.
 class TalkController extends ChangeNotifier {
   TalkController({required this.onPlayPitched});
 
-  /// Callback wired to SoundService.playPitchedFile - keeps audio output
-  /// in one place and lets the settings (sound on/off) apply consistently.
-  final Future<void> Function(String path, double rate) onPlayPitched;
+  /// Wired to SoundService.playPitchedFile - one place owns all audio output
+  /// so the "sound off" setting is respected everywhere.
+  final Future<void> Function(String path) onPlayPitched;
 
-  static const double pitchRate = 1.6; // ~+8 semitones: funny high voice
+  static const double pitchRate = 1.65; // ~+9 semitones: classic cartoon pet voice
+  static const int sampleRate = 16000;
+  static const Duration maxRecording = Duration(seconds: 8);
 
-  final AudioRecorder _rec = AudioRecorder();
-  Timer? _maxRecTimer;
-  Timer? _playDoneTimer;
-  String? _lastRecordPath;
+  final RecorderService _rec = RecorderService();
+
+  Timer? _maxTimer;      // hard cap so we never record a giant file
+  Timer? _levelTimer;    // polls recorder level -> notifies UI at ~12Hz
+  Timer? _playDoneTimer; // ends the "speaking" phase when audio should be over
 
   TalkState _state = TalkState.idle;
   TalkState get state => _state;
 
-  double _amplitude = 0; // live mic level (drives ear glow / meter)
+  double _amplitude = 0;
   double get amplitude => _amplitude;
-
-  StreamSubscription<Amplitude>? _ampSub;
 
   bool get isBusy =>
       _state == TalkState.listening || _state == TalkState.processing || _state == TalkState.speaking;
 
-  /// Tap handler: starts recording, or stops + processes if already listening.
+  /// Mic button tap handler.
   Future<void> toggleRecording() async {
     switch (_state) {
       case TalkState.listening:
@@ -51,12 +51,13 @@ class TalkController extends ChangeNotifier {
       case TalkState.requestingMic:
         await startListening();
         break;
-      default:
-        // Ignore taps while processing/speaking (or restart after speech).
-        if (_state == TalkState.speaking) {
-          await _finishSpeaking();
-          await startListening();
-        }
+      case TalkState.speaking:
+        // Interrupt current playback and start a new take.
+        await _finishSpeaking();
+        await startListening();
+        break;
+      case TalkState.processing:
+        break; // momentary - ignore taps
     }
   }
 
@@ -65,112 +66,75 @@ class TalkController extends ChangeNotifier {
     try {
       if (!await _rec.hasPermission()) {
         _setState(TalkState.idle);
-        return; // user denied - UI shows a hint bubble instead
+        return; // caller listens for permissionDeniedTick to show a hint bubble
       }
-      final dir = await _tempDir();
-      final path = '${dir.path}/rec_${DateTime.now().millisecondsSinceEpoch}.m4a';
-      await _rec.start(
-        const RecordConfig(
-          encoder: AudioEncoder.aacLc, // small + universally readable
-          bitRate: 96000,
-          sampleRate: 16000, // 16k keeps processing cheap; fine for a pet voice
-          numChannels: 1,
-        ),
-        path: path,
-      );
-      _lastRecordPath = path;
+      await _rec.start(sampleRate: sampleRate);
       _setState(TalkState.listening);
 
-      // Live amplitude for the recording meter.
-      _ampSub?.cancel();
-      _ampSub = _rec.onAmplitudeChanged(const Duration(milliseconds: 80)).listen((amp) {
-        // dBFS (-2..0 mapped) -> 0..1
-        final v = ((amp.current + 40) / 40).clamp(0.0, 1.0);
-        _amplitude = v * v; // perceptual-ish curve
+      _levelTimer?.cancel();
+      _levelTimer = Timer.periodic(const Duration(milliseconds: 80), (_) {
+        _amplitude = _rec.level;
         notifyListeners();
       });
 
-      // Auto-stop safety cap (10 s) so we never record huge files.
-      _maxRecTimer?.cancel();
-      _maxRecTimer = Timer(const Duration(seconds: 10), () {
+      _maxTimer?.cancel();
+      _maxTimer = Timer(maxRecording, () {
         if (_state == TalkState.listening) stopAndProcess();
       });
     } catch (e) {
       debugPrint('startListening failed: $e');
+      await _rec.cancel();
       _setState(TalkState.idle);
     }
   }
 
   Future<void> stopAndProcess() async {
     if (_state != TalkState.listening) return;
-    _maxRecTimer?.cancel();
-    await _ampSub?.cancel();
-    _ampSub = null;
-    _amplitude = 0;
+    _maxTimer?.cancel();
+    _levelTimer?.cancel();
+    _levelTimer = null;
 
     String? src;
     try {
       src = await _rec.stop();
-    } catch (_) {
-      src = null;
+    } catch (e) {
+      debugPrint('recorder stop failed: $e');
     }
-    src ??= _lastRecordPath;
-    if (src == null || !await File(src).exists()) {
+    _amplitude = 0;
+    if (src == null) {
       _setState(TalkState.idle);
-      return;
+      return; // nothing said -> back to idle quietly
     }
 
     _setState(TalkState.processing);
 
-    // The m4a from `record` is not trivially decodable in pure Dart, so we
-    // use the pragmatic approach used by many Flutter pets: re-encode via
-    // audioplayers round-trip is unavailable offline -> instead we read the
-    // file with the wav processor when it IS a wav, otherwise fall back to
-    // playback-rate shifting (setPlaybackRate) which still raises the pitch.
-    final dir = await _tempDir();
-    final shifted = '${dir.path}/shifted_${DateTime.now().millisecondsSinceEpoch}.wav';
-    String playPath = src;
-    double rate = pitchRate;
-
-    if (src.endsWith('.wav')) {
-      playPath = await WavProcessor.processFile(src, shifted, pitchRate, 16000);
-      rate = 1.0; // already shifted offline
-    }
-    // else: play at setPlaybackRate(pitchRate) inside SoundService.
+    // Pitch-shift fully offline. shiftPath returns the raw recording as a
+    // graceful fallback if anything about the file is unexpected.
+    final outPath = await WavProcessor.shiftPath(src, pitchRate, sampleRate);
 
     _setState(TalkState.speaking);
-    await onPlayPitched(playPath, playPath.endsWith('.wav') ? 1.0 : pitchRate);
+    await onPlayPitched(outPath);
 
-    // Estimate duration so the mouth animation ends roughly with the audio.
-    final durMs = await _estimateDurationMs(src);
+    // End the mouth animation roughly when the audio ends.
+    final durMs = WavProcessor.durationMsOf(outPath, sampleRate);
     _playDoneTimer?.cancel();
-    _playDoneTimer = Timer(Duration(milliseconds: (durMs / rate).round() + 350), _finishSpeaking);
-  }
-
-  Future<int> _estimateDurationMs(String path) async {
-    try {
-      final stat = await File(path).stat();
-      // AAC @96kbps ≈ 12 KB per second.
-      return math.max(600, (stat.size / 12000 * 1000).round());
-    } catch (_) {
-      return 2000;
-    }
+    _playDoneTimer = Timer(Duration(milliseconds: durMs + 300), _finishSpeaking);
   }
 
   Future<void> _finishSpeaking() async {
     _playDoneTimer?.cancel();
+    _playDoneTimer = null;
     _setState(TalkState.idle);
   }
 
-  /// Cancel everything (called when leaving the screen).
+  /// Cancel everything (called when leaving the screen / app paused).
   Future<void> cancelAll() async {
-    _maxRecTimer?.cancel();
+    _maxTimer?.cancel();
     _playDoneTimer?.cancel();
-    await _ampSub?.cancel();
-    _ampSub = null;
-    try {
-      if (await _rec.isRecording()) await _rec.stop();
-    } catch (_) {}
+    _levelTimer?.cancel();
+    _levelTimer = null;
+    await _rec.cancel();
+    _amplitude = 0;
     _setState(TalkState.idle);
   }
 
@@ -179,16 +143,11 @@ class TalkController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<Directory> _tempDir() async {
-    final d = await getTemporaryDirectory();
-    return d;
-  }
-
   @override
   void dispose() {
-    _maxRecTimer?.cancel();
+    _maxTimer?.cancel();
     _playDoneTimer?.cancel();
-    _ampSub?.cancel();
+    _levelTimer?.cancel();
     _rec.dispose();
     super.dispose();
   }

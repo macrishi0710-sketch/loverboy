@@ -20,8 +20,6 @@ dependencies:
   record: ^5.1.2              # microphone recording (talking mode)
   path_provider: ^2.1.4       # temp dir for recordings
   haptic_feedback: ^0.5.1+1   # light haptic on hit
-  permission_handler: ^11.3.1 # mic permission flow
-  flutter_svg: ^2.0.10+1      # vector art rendering (layered monkey)
 
 dev_dependencies:
   flutter_test:
@@ -38,6 +36,9 @@ flutter:
     - assets/monkey/monkey.svg
     - assets/sounds/
     - assets/audio/test_voice.wav
+    - assets/icon/app_icon.png
+    - assets/icon/app_icon_foreground.png
+    - assets/icon/splash_monkey.png
 
   # Bundled so the app works fully offline (no runtime font download).
   fonts:

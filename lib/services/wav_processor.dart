@@ -158,4 +158,25 @@ class WavProcessor {
       return srcPath; // graceful degradation: play un-pitched audio
     }
   }
+
+  /// Convenience wrapper used by TalkController: derives a sibling file name
+  /// next to [srcPath] and runs [processFile].
+  static Future<String> shiftPath(String srcPath, double ratio, int sampleRate) async {
+    final dot = srcPath.lastIndexOf('.');
+    final base = dot > 0 ? srcPath.substring(0, dot) : srcPath;
+    final dst = '${base}_hi.wav';
+    return processFile(srcPath, dst, ratio, sampleRate);
+  }
+
+  /// Duration in ms of a mono 16-bit PCM wav written at [sampleRate]
+  /// (reads only the file size - cheap and exact for our own writer).
+  static int durationMsOf(String path, int sampleRate) {
+    try {
+      final len = File(path).lengthSync();
+      final samples = ((len - 44) / 2).clamp(0, double.infinity).toInt();
+      return (samples * 1000 / sampleRate).round().clamp(300, 15000);
+    } catch (_) {
+      return 2000;
+    }
+  }
 }

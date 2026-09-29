@@ -1,20 +1,5 @@
-# Flutter/Dart specific
-.dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
-.metadata
-
-# IDE and Editor files
-.idea/
-*.iml
-
-# Android build artifacts
-android/.gradle/
-android/build/
-android/app/build/
-local.propertiesnode_modules/
+(empty)node_modules/
 .next/
 dist/
 build/
 *.log
-node_modules/

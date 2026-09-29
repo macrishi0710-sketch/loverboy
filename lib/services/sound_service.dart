@@ -1,4 +1,5 @@
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:haptic_feedback/haptic_feedback.dart';
 
@@ -30,14 +31,17 @@ class SoundService {
   Future<void> playHappy() => _play(_happy, 'sounds/happy.mp3');
   Future<void> playLaugh() => _play(_laugh, 'sounds/laugh.mp3');
 
-  /// Play a recorded wav file with [rate] > 1.0 = faster/higher pitched.
-  /// audioplayers' setPlaybackRate keeps pitch proportional to speed,
-  /// which gives exactly the classic chipmunk-style pet voice.
-  Future<void> playPitchedFile(String path, {double rate = 1.6}) async {
-    await _voice.stop();
-    await _voice.setReleaseMode(ReleaseMode.stop);
-    await _voice.setPlaybackRate(rate);
-    await _voice.play(DeviceFileSource(path));
+  /// Play a recorded wav file. The file was already pitch-shifted on-device
+  /// by [WavProcessor], so it plays at normal rate; `sound off` still applies.
+  Future<void> playPitchedFile(String path) async {
+    if (!soundsEnabled) return;
+    try {
+      await _voice.stop();
+      await _voice.setReleaseMode(ReleaseMode.stop);
+      await _voice.play(DeviceFileSource(path));
+    } catch (e) {
+      debugPrint('playPitchedFile failed: $e');
+    }
   }
 
   Future<void> _play(AudioPlayer p, String asset) async {
