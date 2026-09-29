@@ -1,0 +1,66 @@
+name: talking_monkey
+description: "Miko the Monkey - an original cartoon pet you can tap, talk to and giggle with. Made with love for Yashi."
+publish_to: 'none'
+
+# App name suggestion: "Miko Monkey: Tap & Talk Pet"
+# Package id: com.yashi.talkingmonkey  |  Version: 1.0.0 (build 1)
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.5.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  provider: ^6.1.2            # simple state management
+  shared_preferences: ^2.3.2  # offline persistence (counter, settings, footer)
+  audioplayers: ^6.1.0        # sound FX + pitched playback of recordings
+  record: ^5.1.2              # microphone recording (talking mode)
+  path_provider: ^2.1.4       # temp dir for recordings
+  haptic_feedback: ^0.5.1+1   # light haptic on hit
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.14.1
+  flutter_native_splash: ^2.4.1
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/speech_lines.json
+    - assets/monkey/monkey.svg
+    - assets/sounds/
+    - assets/audio/test_voice.wav
+    - assets/icon/app_icon.png
+    - assets/icon/app_icon_foreground.png
+    - assets/icon/splash_monkey.png
+
+  # Bundled so the app works fully offline (no runtime font download).
+  fonts:
+    - family: Caveat
+      fonts:
+        - asset: assets/fonts/Caveat-Regular.ttf
+        - asset: assets/fonts/Caveat-Bold.ttf
+          weight: 700
+
+# Generates Android/iOS launcher icons from assets/icon/app_icon.png
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/app_icon.png"
+  adaptive_icon_background: "#fff5ef"
+  adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
+  remove_alpha_ios: true
+
+# Generates native splash screens.
+flutter_native_splash:
+  color: "#fff5ef"
+  image: "assets/icon/splash_monkey.png"
+  android_12:
+    color: "#fff5ef"
+    image: "assets/icon/splash_monkey.png"

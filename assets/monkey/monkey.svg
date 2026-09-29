@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500">
+  <!-- Miko the Monkey - ORIGINAL character art (not Tom, not Outfit7).
+       Layers are grouped by id so Flutter can animate them independently:
+       #tail #body #armL #armR #head #eyeL #eyeR #mouth #belly -->
+
+  <!-- TAIL (sways from hip pivot) -->
+  <g id="tail">
+    <path d="M262 372 C 318 366 344 330 332 292 C 326 272 306 268 300 284 C 296 296 308 302 314 294"
+          fill="none" stroke="#a8763f" stroke-width="16" stroke-linecap="round"/>
+  </g>
+
+  <!-- BODY -->
+  <g id="body">
+    <ellipse cx="200" cy="352" rx="92" ry="104" fill="#b9854c"/>
+    <!-- belly patch (tappable -> giggle) -->
+    <ellipse id="belly" cx="200" cy="368" rx="58" ry="68" fill="#f2d6b3"/>
+  </g>
+
+  <!-- ARMS -->
+  <g id="armL">
+    <path d="M120 320 C 96 344 92 384 108 412 C 116 426 134 424 138 410 C 144 388 138 352 146 332 Z" fill="#a8763f"/>
+    <circle cx="122" cy="414" r="16" fill="#f2d6b3"/>
+  </g>
+  <g id="armR">
+    <path d="M280 320 C 304 344 308 384 292 412 C 284 426 266 424 262 410 C 256 388 262 352 254 332 Z" fill="#a8763f"/>
+    <circle cx="278" cy="414" r="16" fill="#f2d6b3"/>
+  </g>
+
+  <!-- FEET -->
+  <ellipse cx="152" cy="452" rx="30" ry="16" fill="#a8763f"/>
+  <ellipse cx="248" cy="452" rx="30" ry="16" fill="#a8763f"/>
+
+  <!-- HEAD group (breathes / tilts when petted) -->
+  <g id="head">
+    <!-- ears -->
+    <g id="earL"><circle cx="96" cy="176" r="30" fill="#a8763f"/><circle cx="98" cy="176" r="17" fill="#f2d6b3"/></g>
+    <g id="earR"><circle cx="304" cy="176" r="30" fill="#a8763f"/><circle cx="302" cy="176" r="17" fill="#f2d6b3"/></g>
+
+    <!-- skull + face -->
+    <circle cx="200" cy="182" r="112" fill="#b9854c"/>
+    <ellipse cx="200" cy="212" rx="86" ry="74" fill="#f2d6b3"/>
+
+    <!-- brows -->
+    <path id="browL" d="M136 150 Q 158 138 182 148" fill="none" stroke="#6b4a2b" stroke-width="7" stroke-linecap="round"/>
+    <path id="browR" d="M218 148 Q 242 138 264 150" fill="none" stroke="#6b4a2b" stroke-width="7" stroke-linecap="round"/>
+
+    <!-- EYES (pupils; eyelids drawn in code for blink / "ow" squeeze faces) -->
+    <g id="eyeL">
+      <circle cx="160" cy="182" r="16" fill="#ffffff"/>
+      <circle cx="163" cy="184" r="9" fill="#3a2418"/>
+      <circle cx="166" cy="181" r="3" fill="#ffffff"/>
+    </g>
+    <g id="eyeR">
+      <circle cx="240" cy="182" r="16" fill="#ffffff"/>
+      <circle cx="237" cy="184" r="9" fill="#3a2418"/>
+      <circle cx="234" cy="181" r="3" fill="#ffffff"/>
+    </g>
+
+    <!-- blush cheeks -->
+    <ellipse id="cheekL" cx="132" cy="216" rx="16" ry="10" fill="#f6a5b8" opacity="0.75"/>
+    <ellipse id="cheekR" cx="268" cy="216" rx="16" ry="10" fill="#f6a5b8" opacity="0.75"/>
+
+    <!-- nose -->
+    <ellipse cx="200" cy="212" rx="12" ry="8" fill="#8a5a34"/>
+    <circle cx="196" cy="211" r="2" fill="#4a2b35"/>
+    <circle cx="204" cy="211" r="2" fill="#4a2b35"/>
+
+    <!-- MOUTH (happy smile; swapped to open "ow" oval in code) -->
+    <path id="mouth" d="M172 236 Q 200 262 228 236" fill="none" stroke="#4a2b35" stroke-width="6" stroke-linecap="round"/>
+  </g>
+</svg>
