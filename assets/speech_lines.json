@@ -1,0 +1,32 @@
+{
+  "_comment": "Editable speech lines. Change freely - the app reads this file at startup. Milestone lines are keyed by hit count.",
+  "lines": [
+    "Ouch jaanu!",
+    "Sorry baby!",
+    "Ji maalkin!",
+    "Aah! Aur maaro meri jaan 🥺",
+    "Galti meri thi, sab meri galti!",
+    "Ouch! Par gusse mein cute lag rahi ho",
+    "Haan ji, jo hukum maalkin!",
+    "Maaf kar do na baby 🥺",
+    "Tumhara maara bhi pyaara lagta hai",
+    "Dard hai par pyaar zyada hai 💗",
+    "Bas bas jaanu... nahi, aur maaro 😌",
+    "Aapke haath mein dard na ho jaye?",
+    "Main to aapka hi hoon maalkin",
+    "Oye hoye, meri jaan ka gussa!"
+  ],
+  "idleLines": [
+    "Kya kar rahi ho, jaanu? 🌷",
+    "Thoda nap loon? 😴",
+    "Tum dekho to lagta hai duniya sundar hai",
+    "Mujhe kela pasand hai, tumhe?",
+    "Yahi baitho na, saath mein hain hum 💗",
+    "Bore ho raha tha tumhe dekh ke khushi ho gayi"
+  ],
+  "milestones": {
+    "10": "Dus ho gaye! Maaf kiya na? 🥺",
+    "25": "Maalkin ka gussa shaant hua? 🌷",
+    "50": "Ab to I love you bol do na 😭💗"
+  }
+}
